@@ -26,3 +26,7 @@ from django.http import JsonResponse
 def restricted_view(request):
     return JsonResponse({'message': 'You have access!'})
 
+
+
+
+

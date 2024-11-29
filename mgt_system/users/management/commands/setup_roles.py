@@ -2,6 +2,8 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
+from documents.models import Document
+
 from users.models import CustomUser  # Replace with the actual path if different
 
 class Command(BaseCommand):
@@ -14,7 +16,8 @@ class Command(BaseCommand):
         employee_group, created = Group.objects.get_or_create(name='Employee')
 
         # Create custom permissions (ensure they match your model definition)
-        content_type = ContentType.objects.get(app_label='users', model='document')
+        content_type = ContentType.objects.get(app_label='documents', model='document')
+
         permission_add_document, created = Permission.objects.get_or_create(
             codename='custom_add_document',
             name='Can custom add document',
