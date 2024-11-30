@@ -2,7 +2,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-class CustomUser(AbstractUser):
+''' class CustomUser(AbstractUser):
     ROLE_CHOICES = (
         ('Administrator', 'Administrator'),
         ('Manager', 'Manager'),
@@ -30,3 +30,4 @@ class UserRole(models.Model):
 
     def remove_permission(self, permission):
         self.permissions.remove(permission)
+        '''
