@@ -42,6 +42,8 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseForbidden
 from django.contrib.auth.models import Group, User
+from .serializers import UserSerializer
+from rest_framework import viewsets
 
 # Register view
 def register(request):
@@ -92,6 +94,12 @@ def group_required(group_name):
 @group_required('Administrators')
 def admin_view(request):
     return render(request, 'users/admin_page.html')
+
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 
 

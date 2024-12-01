@@ -5,8 +5,7 @@ from .models import Document, Workflow
 class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
-        fields = '__all__'
-
+        fields = '__all__'  
 
 class WorkflowSerializer(serializers.ModelSerializer):
     class Meta:

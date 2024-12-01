@@ -5,6 +5,17 @@ from .models import Document, Workflow
 from .serializers import DocumentSerializer, WorkflowSerializer
 
 
+
+class DocumentViewSet(viewsets.ModelViewSet):
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
+
+class WorkflowViewSet(viewsets.ModelViewSet):
+    queryset = Workflow.objects.all()
+    serializer_class = WorkflowSerializer
+
+
+'''
 class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer
@@ -24,4 +35,4 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
 class WorkflowViewSet(viewsets.ModelViewSet):
     queryset = Workflow.objects.all()
-    serializer_class = WorkflowSerializer
+    serializer_class = WorkflowSerializer'''

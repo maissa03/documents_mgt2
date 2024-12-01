@@ -18,10 +18,18 @@ Including another URLconf
 from django.urls import include, path
 from graphene_django.views import GraphQLView
 from graphql_app.schema import schema
+from users.views import UserViewSet
+from documents.views import DocumentViewSet, WorkflowViewSet
+from rest_framework.routers import DefaultRouter
+
+router = DefaultRouter()
+router.register(r'documents', DocumentViewSet)
+router.register(r'workflows', WorkflowViewSet)
+router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('users/', include('users.urls')),
-    path('api/', include('documents.urls')), 
+    path('api/', include(router.urls)), 
     path('graphql/', GraphQLView.as_view(graphiql=True, schema=schema)), 
 ]
 
