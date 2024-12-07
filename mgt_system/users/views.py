@@ -52,7 +52,7 @@ def register(request):
         if form.is_valid():
             user = form.save()
              # Add the user to the 'Employees' group by default
-            employees_group = Group.objects.get(name='Employees')
+            employees_group = Group.objects.get(name='Employee')
             user.groups.add(employees_group)
             return redirect('login')
     else:
@@ -67,10 +67,13 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
             # Redirect based on role
-            if user.groups.filter(name='Administrators').exists():
+            if user.groups.filter(name='Administrator').exists():
+                print("User is an Administrator.")
                 return redirect('admin_view')
-            elif user.groups.filter(name='Employees').exists():
-                return redirect('/documents/')  # Redirect to document list or creation form
+            elif user.groups.filter(name='Employee').exists():
+                return redirect('employee_dashboard')  # Redirect to document list or creation form
+            elif user.groups.filter(name='Manager').exists():
+                return redirect('manager_dashboard')  # Redirect to document list or creation form
             else:
                 return HttpResponseForbidden("You do not have permission to access this page.")
     else:
@@ -91,17 +94,37 @@ def group_required(group_name):
 
 # Admin-only view
 @login_required
-@group_required('Administrators')
+@group_required('Administrator')
 def admin_view(request):
     return render(request, 'users/admin_page.html')
+
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.http import HttpResponseForbidden
+
+# Function to check if user is a manager
+def is_manager(user):
+    return user.groups.filter(name='Manager').exists()
+
+# Function to check if user is an employee
+def is_employee(user):
+    return user.groups.filter(name='Employee').exists()
+
+@login_required
+@user_passes_test(is_manager, login_url='login')
+def manager_dashboard(request):
+    return render(request, 'users/manager_dashboard.html')
+
+@login_required
+@user_passes_test(is_employee, login_url='login')
+def employee_dashboard(request):
+    return render(request, 'users/employee_dashboard.html')
 
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
-
-
 
 

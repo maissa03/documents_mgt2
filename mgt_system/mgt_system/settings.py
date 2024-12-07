@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'users',
     'documents',
     'rest_framework',
-    'graphene_django','graphql_app',
+    'graphene_django','graphql_app','corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -50,7 +50,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware','corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'mgt_system.urls'
@@ -131,4 +131,16 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-#AUTH_USER_MODEL = 'users.CustomUser'
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+CORS_ALLOW_ALL_ORIGINS = True  
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',  # Default backend
+)
+
+SITE_ID = 1

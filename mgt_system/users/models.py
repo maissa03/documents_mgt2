@@ -31,3 +31,4 @@ class UserRole(models.Model):
     def remove_permission(self, permission):
         self.permissions.remove(permission)
         '''
+
