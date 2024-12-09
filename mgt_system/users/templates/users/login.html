@@ -1,4 +1,68 @@
-<!-- users/templates/users/login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Login</h1>
+        <form id="login-form" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">Login</button>
+            <div id="error-message" class="error-message"></div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                username: formData.get('username'),
+                password: formData.get('password')
+            };
+
+            try {
+                const response = await fetch('/users/api/login/', {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'  // Ensure this is rendered correctly by Django
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.redirect_url) {
+                        window.location.href = result.redirect_url;
+                    }
+                } else {
+                    const error = await response.json();
+                    document.getElementById('error-message').textContent = error.error || 'Login failed!';
+                }
+            } catch (error) {
+                console.error('An error occurred:', error);
+                document.getElementById('error-message').textContent = 'An unexpected error occurred. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+ <!--
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -123,3 +187,4 @@
     </div>
 </body>
 </html>
+-->

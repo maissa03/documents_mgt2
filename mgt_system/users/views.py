@@ -36,6 +36,8 @@ from django.http import JsonResponse
 def restricted_view(request):
     return JsonResponse({'message': 'You have access!'})"""
 
+"""
+
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -127,4 +129,80 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+"""
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from django.contrib.auth.models import Group, User
+from django.contrib.auth import authenticate, login
+from .serializers import UserSerializer
+from rest_framework.decorators import api_view, permission_classes
+
+# Register API
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            employees_group, created = Group.objects.get_or_create(name='Employee')
+            user.groups.add(employees_group)
+            return Response({"message": "User registered successfully."}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Login API
+class LoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        user = authenticate(request, username=username, password=password)
+        
+        if user:
+            login(request, user)
+            if user.groups.filter(name='Administrator').exists():
+                return Response({'redirect_url': '/users/dashboard/admin/'}, status=status.HTTP_200_OK)
+            elif user.groups.filter(name='Manager').exists():
+                return Response({'redirect_url': '/users/dashboard/manager/'}, status=status.HTTP_200_OK)
+            elif user.groups.filter(name='Employee').exists():
+                return Response({'redirect_url': '/users/dashboard/employee/'}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "User does not have a valid role."}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            # Add a print statement for debugging
+            print(f"Failed login attempt for username: {username}")
+            return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+
+# Group-based Views
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def admin_view(request):
+    if request.user.groups.filter(name='Administrator').exists():
+        return Response({"message": "Welcome, Administrator!"})
+    return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def manager_dashboard(request):
+    if request.user.groups.filter(name='Manager').exists():
+        return Response({"message": "Welcome, Manager!"})
+    return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def employee_dashboard(request):
+    if request.user.groups.filter(name='Employee').exists():
+        return Response({"message": "Welcome, Employee!"})
+    return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+# User ViewSet
+from rest_framework.viewsets import ModelViewSet
+
+class UserViewSet(ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
