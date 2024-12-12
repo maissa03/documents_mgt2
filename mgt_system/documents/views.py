@@ -14,6 +14,37 @@ class WorkflowViewSet(viewsets.ModelViewSet):
     queryset = Workflow.objects.all()
     serializer_class = WorkflowSerializer'''
 
+from rest_framework import viewsets
+from .models import Workflow, Document, WorkflowStage, WorkflowInstance, StageTransition
+from .serializers import (WorkflowSerializer, DocumentSerializer, 
+                          WorkflowStageSerializer, WorkflowInstanceSerializer, 
+                          StageTransitionSerializer)
+
+class DocumentViewSet(viewsets.ModelViewSet):
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
+
+
+class WorkflowViewSet(viewsets.ModelViewSet):
+    queryset = Workflow.objects.all()
+    serializer_class = WorkflowSerializer
+
+
+class WorkflowStageViewSet(viewsets.ModelViewSet):
+    queryset = WorkflowStage.objects.all()
+    serializer_class = WorkflowStageSerializer
+
+
+class WorkflowInstanceViewSet(viewsets.ModelViewSet):
+    queryset = WorkflowInstance.objects.all()
+    serializer_class = WorkflowInstanceSerializer
+
+
+class StageTransitionViewSet(viewsets.ModelViewSet):
+    queryset = StageTransition.objects.all()
+    serializer_class = StageTransitionSerializer
+
+
 
 
 from rest_framework import viewsets
@@ -40,7 +71,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Handles file upload, text extraction, summarization, and classification."""
         # Check if the file is uploaded
-        file = self.request.FILES.get('file')
+        file = self.request.FILES.get('file_path')
         if not file:
             raise ValidationError("A file must be uploaded.")
 
@@ -52,11 +83,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
         print("Extracted Content:", document_content)
 
         # Summarize the content using HuggingFace pipeline
-        summarized_content = summarizer(document_content, max_length=10000, min_length=5, do_sample=False)
+        summarized_content = summarizer(document_content, max_length=1000000, min_length=5, do_sample=False)
         summary_text = summarized_content[0]['summary_text']
 
         # Classify the summarized content
-        result = classifier(summary_text, candidate_labels=['Invoice', 'Contract', 'Report'])
+        result = classifier(document_content, candidate_labels=['Invoice', 'Contract', 'Report'])
         document_type = result['labels'][0]  # Get the most likely label
 
         # Save the document with extracted details
@@ -74,7 +105,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(uploaded_by=user)
         return queryset
 
-
+'''
 class WorkflowViewSet(viewsets.ModelViewSet):
     queryset = Workflow.objects.all()
     serializer_class = WorkflowSerializer
@@ -93,6 +124,32 @@ class WorkflowViewSet(viewsets.ModelViewSet):
             return Response({'message': f'Document {document.title} assigned to workflow {workflow.name}.'})
         except Workflow.DoesNotExist:
             return Response({'error': 'Workflow not found.'}, status=404)
+        '''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

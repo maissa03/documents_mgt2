@@ -23,13 +23,12 @@ from documents.views import DocumentViewSet, WorkflowViewSet
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
-router.register(r'documents', DocumentViewSet)
-router.register(r'workflows', WorkflowViewSet)
 router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('users/', include('users.urls')),
     path('api/', include(router.urls)), 
+    path('documents/', include('documents.urls')),
     path('graphql/', GraphQLView.as_view(graphiql=True, schema=schema)), 
 ]
 
