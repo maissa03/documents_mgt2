@@ -16,13 +16,7 @@ class WorkflowViewSet(viewsets.ModelViewSet):
 
 from rest_framework import viewsets
 from .models import Workflow, Document, WorkflowStage, WorkflowInstance, StageTransition
-from .serializers import (WorkflowSerializer, DocumentSerializer, 
-                          WorkflowStageSerializer, WorkflowInstanceSerializer, 
-                          StageTransitionSerializer)
-
-class DocumentViewSet(viewsets.ModelViewSet):
-    queryset = Document.objects.all()
-    serializer_class = DocumentSerializer
+from .serializers import (WorkflowSerializer, DocumentSerializer,WorkflowStageSerializer, WorkflowInstanceSerializer,StageTransitionSerializer)
 
 
 class WorkflowViewSet(viewsets.ModelViewSet):
@@ -104,7 +98,6 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if user.groups.filter(name="Employees").exists():
             queryset = queryset.filter(uploaded_by=user)
         return queryset
-
 '''
 class WorkflowViewSet(viewsets.ModelViewSet):
     queryset = Workflow.objects.all()
