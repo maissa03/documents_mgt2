@@ -24,5 +24,6 @@ router.register(r'stage-transitions', StageTransitionViewSet, basename='stagetra
 
 urlpatterns = [
     path('', include(router.urls)),
+    #path('assign-workflow/<int:workflow_id>/', AssignWorkflowView.as_view(), name='assign-workflow'),
 ]
 
