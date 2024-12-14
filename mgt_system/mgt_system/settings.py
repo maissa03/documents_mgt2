@@ -55,6 +55,14 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'mgt_system.urls'
 
+
+
+
+NEXTCLOUD_URL = "https://use08.thegood.cloud/"
+NEXTCLOUD_USERNAME = "maalejmaissa7@gmail.com"
+NEXTCLOUD_PASSWORD = "Qb#M5!Xz@A@kX.f"
+
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -144,3 +152,4 @@ AUTHENTICATION_BACKENDS = (
 )
 
 SITE_ID = 1
+

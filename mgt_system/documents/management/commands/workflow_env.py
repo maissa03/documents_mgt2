@@ -3,71 +3,91 @@ from gym import spaces
 import numpy as np
 from documents.models import Workflow, WorkflowInstance, User
 
+
+MAX_MANAGERS = 10  # Define the maximum number of managers
+
 class WorkflowEnvironment(gym.Env):
     def __init__(self):
         super().__init__()
 
-        # Fetch managers (users with 'Manager' role/group)
-        self.managers = User.objects.filter(groups__name='Manager')
+        # Fetch workflows dynamically
         self.workflows = Workflow.objects.all()
 
-        # Action space: we have an action for each manager
-        self.action_space = spaces.Discrete(len(self.managers))  # Number of managers
+        # Action space: select one of the managers (by index)
+        self.managers = self._fetch_managers()
+        self.action_space = spaces.Discrete(MAX_MANAGERS)
 
-        # Observation space: document types + manager workload
-        # State includes:
-        # - 3 document types (one-hot encoded)
-        # - Number of managers, where each entry represents the manager's workload
+        # Observation space: document types (3) + workloads (MAX_MANAGERS)
         self.observation_space = spaces.Box(
-            low=0, high=1, 
-            shape=(3 + len(self.managers),),  # 3 document types + len(managers) for workload
+            low=0, high=100,
+            shape=(3 + MAX_MANAGERS,),  # Static shape
             dtype=np.float32
         )
-
         self.state = None
 
     def reset(self):
-        # Reset the environment state: no workflows assigned, all managers idle
-        self.state = np.zeros(3 + len(self.managers))  # 3 for document types, others for manager workloads
+        """
+        Reset the environment state.
+        """
+        self.managers = self._fetch_managers()
+        num_managers = len(self.managers)
+
+        # Update the action space dynamically
+        self.action_space = spaces.Discrete(num_managers)
+
+        # Fetch workloads
+        workloads = [self._get_manager_workload(manager) for manager in self.managers]
+
+        # Pad workloads to match MAX_MANAGERS
+        padded_workloads = workloads + [0] * (MAX_MANAGERS - len(workloads))
+
+        self.state = np.zeros(3 + MAX_MANAGERS)
+        self.state[3:] = padded_workloads[:MAX_MANAGERS]
         return self.state
 
+
     def step(self, action=None):
-        # If no action is passed, pick the best manager based on their workload
-        if action is None:
-            # Get the current workload for each manager
-            manager_workloads = [self._get_manager_workload(manager) for manager in self.managers]
-            
-            # Choose the manager with the minimum workload (fair assignment)
-            action = np.argmin(manager_workloads)
+        """
+        Step function to choose a manager and assign workload.
+        """
+        # Fetch the list of managers dynamically
+        self.managers = self._fetch_managers()
+        num_managers = len(self.managers)
+        
+        # Validate the action and clip it to the number of managers
+        if action is None or action >= num_managers:
+            action = np.argmin([self._get_manager_workload(manager) for manager in self.managers])
+        else:
+            action = min(action, num_managers - 1)  # Clip the action to a valid range
 
-        # Ensure action is a scalar integer (manager index)
-        action = int(action) if isinstance(action, np.ndarray) else action
+        # Select the manager
+        selected_manager = self.managers[int(action)]
 
-        # Convert the managers QuerySet to a list for indexing
-        managers_list = list(self.managers)
-
-        # Select the manager based on the action
-        selected_manager = managers_list[action]  # Now selecting the manager from the list
-
-        # Randomly select a document type (for simplicity)
+        # Update workloads
         document_type = np.random.randint(0, 3)
+        workloads = [self._get_manager_workload(manager) for manager in self.managers]
+        workloads[action] += 1
 
-        # Calculate the number of "In Progress" workflows assigned to the selected manager
-        workload = WorkflowInstance.objects.filter(performed_by=selected_manager, status='In Progress').count()
+        # Update the state
+        self.state[:3] = 0
+        self.state[document_type] = 1
+        self.state[3:] = workloads + [0] * (MAX_MANAGERS - len(workloads))
 
-        # Reward logic: reward is higher for managers with lower workloads
-        reward = 1 / (workload + 1)  # Prevent division by zero (workload is 0, reward = 1)
-
-        # Update state: document type (one-hot encoding) + manager's workload incremented
-        self.state[:3] = 0  # Reset the document type section of the state
-        self.state[document_type] = 1  # Set the document type in the state
-        self.state[3 + action] += 1  # Increment the workload for the selected manager
-
-        done = False  # Optional termination condition (e.g., for episode-based environments)
-
+        # Reward
+        reward = 1 / workloads[action]
+        done = False
         return self.state, reward, done, {}
 
 
+
     def _get_manager_workload(self, manager):
-        # Return the number of "In Progress" workflows assigned to a manager
+        """
+        Fetch the current workload (number of 'In Progress' workflows) for a manager.
+        """
         return WorkflowInstance.objects.filter(performed_by=manager, status='In Progress').count()
+
+    def _fetch_managers(self):
+        """
+        Fetch the list of managers dynamically.
+        """
+        return User.objects.filter(groups__name='Manager')
