@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'users',
     'documents',
     'rest_framework',
-    'graphene_django','graphql_app','corsheaders',
+    'graphene_django','graphql_app','corsheaders','legacy_soap',
 ]
 
 MIDDLEWARE = [
@@ -152,4 +152,11 @@ AUTHENTICATION_BACKENDS = (
 )
 
 SITE_ID = 1
+
+# Add trusted origins (URLs) to allow them to bypass CSRF checks
+CSRF_TRUSTED_ORIGINS = [
+    
+    'chrome-extension://eipdnjedkpcnlmmdfdkgfpljanehloah',  # if you're working with a Chrome extension
+]
+
 
