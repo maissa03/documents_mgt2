@@ -12,9 +12,10 @@ class WorkflowEnvironment(gym.Env):
 
         # Fetch workflows dynamically
         self.workflows = Workflow.objects.all()
-
+        print(self.workflows)
         # Action space: select one of the managers (by index)
         self.managers = self._fetch_managers()
+        print(self.managers)
         self.action_space = spaces.Discrete(MAX_MANAGERS)
 
         # Observation space: document types (3) + workloads (MAX_MANAGERS)
@@ -54,29 +55,35 @@ class WorkflowEnvironment(gym.Env):
         self.managers = self._fetch_managers()
         num_managers = len(self.managers)
         
-        # Validate the action and clip it to the number of managers
+        # Fetch current workloads
+        workloads = [self._get_manager_workload(manager) for manager in self.managers]
+        print("Current workloads:", workloads)
+
+        # Select the manager with the least workload if no action is provided
         if action is None or action >= num_managers:
-            action = np.argmin([self._get_manager_workload(manager) for manager in self.managers])
-        else:
-            action = min(action, num_managers - 1)  # Clip the action to a valid range
+            action = np.argmin(workloads)  # Select the manager with the smallest workload
+        
+        # Clip the action to a valid range (failsafe)
+        action = min(action, num_managers - 1)
 
         # Select the manager
         selected_manager = self.managers[int(action)]
-
-        # Update workloads
-        document_type = np.random.randint(0, 3)
-        workloads = [self._get_manager_workload(manager) for manager in self.managers]
-        workloads[action] += 1
-
+        print("Selected manager:", selected_manager)
+        
+        # Update the state to reflect document assignment
+        document_type = np.random.randint(0, 3)  # Random document type (0, 1, 2)
+        workloads[action] += 1  # Increment workload for the selected manager
+        
         # Update the state
-        self.state[:3] = 0
-        self.state[document_type] = 1
+        self.state[:3] = 0  # Reset document type states
+        self.state[document_type] = 1  # Set the assigned document type
         self.state[3:] = workloads + [0] * (MAX_MANAGERS - len(workloads))
 
-        # Reward
+        # Reward inversely proportional to the workload (to balance assignments)
         reward = 1 / workloads[action]
         done = False
         return self.state, reward, done, {}
+
 
 
 
@@ -84,6 +91,7 @@ class WorkflowEnvironment(gym.Env):
         """
         Fetch the current workload (number of 'In Progress' workflows) for a manager.
         """
+        print(WorkflowInstance.objects.filter(performed_by=manager, status='In Progress').count())
         return WorkflowInstance.objects.filter(performed_by=manager, status='In Progress').count()
 
     def _fetch_managers(self):

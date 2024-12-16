@@ -155,9 +155,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
         # Clip the action to be within valid range
         num_managers = len(env.managers)
         action = min(action, num_managers - 1)  # Clip the action if it exceeds the available managers
-
+        print(action)
         try:
-            selected_manager = env.managers[int(action)]
+            selected_manager = env.managers[action-1]
         except IndexError:
             raise ValidationError(f"Invalid action: {action}. Check RL model predictions and environment setup.")
 
@@ -196,24 +196,4 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if user.groups.filter(name="Employees").exists():
             queryset = queryset.filter(uploaded_by=user)
         return queryset
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
