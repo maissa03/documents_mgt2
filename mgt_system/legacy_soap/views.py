@@ -9,9 +9,30 @@ import requests
 from requests.auth import HTTPBasicAuth
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from zeep import Client, Fault
 
 class LegacyDocumentView(APIView):
-    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """Send a document to the REST API via the SOAP service."""
+        document_name = request.data.get("document_name")
+        if not document_name:
+            return Response({"error": "Document name is required."}, status=400)
+
+        try:
+            # Set up the SOAP client
+            client = Client("http://127.0.0.1:8000/soap/?wsdl")
+
+            # Call the send_document_to_rest method
+            result = client.service.send_document_to_rest(document_name)
+
+            return Response({"message": result}, status=200)
+
+        except Fault as e:
+            return Response({"error": f"SOAP Fault: {e}"}, status=500)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
     
     def get(self, request):
         """Fetch and integrate legacy documents."""

@@ -19,9 +19,11 @@ from django.urls import include, path
 from graphene_django.views import GraphQLView
 from graphql_app.schema import schema
 from users.views import UserViewSet
-from documents.views import DocumentViewSet, WorkflowViewSet
+from documents.views import DocumentViewSet, WorkflowViewSet,HandleSOAPDocumentView
 from rest_framework.routers import DefaultRouter
-from legacy_soap.soap_services import access_soap_app
+from legacy_soap.soap_services import legacy_document_service_app
+
+
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 
@@ -30,6 +32,7 @@ urlpatterns = [
     path('api/', include(router.urls)), 
     path('documents/', include('documents.urls')),
     path('graphql/', GraphQLView.as_view(graphiql=True, schema=schema)), 
-    path('soap/', access_soap_app),
+    path('soap/', legacy_document_service_app),
+    path('handle_soap_document/', HandleSOAPDocumentView.as_view(), name='handle_soap_document'),
 ]
 
