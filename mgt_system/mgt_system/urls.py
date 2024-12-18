@@ -22,8 +22,12 @@ from users.views import UserViewSet
 from documents.views import DocumentViewSet, WorkflowViewSet,HandleSOAPDocumentView
 from rest_framework.routers import DefaultRouter
 from legacy_soap.soap_services import legacy_document_service_app
-
-
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+from django.conf import settings
+from django.conf.urls.static import static
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 
@@ -34,5 +38,9 @@ urlpatterns = [
     path('graphql/', GraphQLView.as_view(graphiql=True, schema=schema)), 
     path('soap/', legacy_document_service_app),
     path('handle_soap_document/', HandleSOAPDocumentView.as_view(), name='handle_soap_document'),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

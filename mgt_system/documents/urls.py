@@ -15,6 +15,7 @@ from .views import (WorkflowViewSet, DocumentViewSet,
                     WorkflowStageViewSet, WorkflowInstanceViewSet, HandleSOAPDocumentView,
                     StageTransitionViewSet)
 
+
 router = DefaultRouter()
 router.register(r'documents', DocumentViewSet, basename='document')
 #router.register(r'handle_soap_document', HandleSOAPDocumentView, basename='handle_soap_document')

@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'users',
     'documents',
     'rest_framework',
-    'graphene_django','graphql_app','corsheaders','legacy_soap',
+    'graphene_django','graphql_app','corsheaders','legacy_soap','rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -142,6 +142,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication', 
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
@@ -166,3 +167,17 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+import os
+# Media Configuration
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

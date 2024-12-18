@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404
 from .management.commands.workflow_env import WorkflowEnvironment
 import requests
 from requests.auth import HTTPBasicAuth
+from rest_framework import status  # Add this import
 
 # Initialize HuggingFace pipelines
 classifier = pipeline('zero-shot-classification', model='facebook/bart-large-mnli')
@@ -36,10 +37,6 @@ class WorkflowStageViewSet(viewsets.ModelViewSet):
     queryset = WorkflowStage.objects.all()
     serializer_class = WorkflowStageSerializer
 
-
-class WorkflowInstanceViewSet(viewsets.ModelViewSet):
-    queryset = WorkflowInstance.objects.all()
-    serializer_class = WorkflowInstanceSerializer
 
 
 class StageTransitionViewSet(viewsets.ModelViewSet):
@@ -64,6 +61,7 @@ from django.shortcuts import get_object_or_404
 from .management.commands.workflow_env import WorkflowEnvironment
 import requests
 from requests.auth import HTTPBasicAuth
+from rest_framework.parsers import MultiPartParser, FormParser
 
 # Initialize the HuggingFace pipelines
 classifier = pipeline('zero-shot-classification', model='facebook/bart-large-mnli')
@@ -75,8 +73,36 @@ class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [IsAuthenticated]
 
+    parser_classes = [MultiPartParser, FormParser]  # Add parsers to support file uploads
+
+    @action(detail=True, methods=['PATCH'], url_path='edit')
+    def edit_document(self, request, pk=None):
+        """
+        Allows the employee to update the document name and file.
+        """
+        document = self.get_object()
+
+        # Ensure the employee is the owner of the document
+        if document.uploaded_by != request.user:
+            return Response(
+                {"error": "You are not authorized to edit this document."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Extract new title and file from request
+        title = request.data.get("title", document.title)
+        file = request.FILES.get("file_path", document.file_path)
+
+        document.title = title
+        document.file_path = file
+        document.save()
+
+        return Response({"message": "Document updated successfully.", "data": DocumentSerializer(document).data}, status=status.HTTP_200_OK)
+
     def perform_create(self, serializer):
         """Handles document creation with file upload, text extraction, summarization, and workflow assignment."""
+        print("Request Data:", self.request.data)
+        print("Uploaded by:", self.request.user)
         # Check if a file was uploaded
         file = self.request.FILES.get('file_path')
         if not file:
@@ -213,14 +239,92 @@ class DocumentViewSet(viewsets.ModelViewSet):
         except Workflow.DoesNotExist:
             raise ValidationError(f"Workflow for '{document_type}' not found. Create the workflow in the system.")
     def get_queryset(self):
-        """Filter documents by user role."""
+        """
+        Filter documents by the logged-in user.
+        Employees will only see documents they uploaded.
+        """
         user = self.request.user
-        queryset = Document.objects.all()
-        if user.groups.filter(name="Employees").exists():
-            queryset = queryset.filter(uploaded_by=user)
-        return queryset
-    
+        print(f"Authenticated User: {user}")
 
+        if not user.is_authenticated:
+            print("User is not authenticated")
+            return Document.objects.none()
+
+        if user.groups.filter(name="Employee").exists():
+            print(f"Employee documents filtered for user: {user.username}")
+            return Document.objects.filter(uploaded_by=user)
+
+        print("Default behavior: returning all documents")
+        return Document.objects.all()
+
+
+
+class WorkflowInstanceViewSet(viewsets.ModelViewSet):
+    queryset = WorkflowInstance.objects.all()
+    serializer_class = WorkflowInstanceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Filter workflow instances to show only those assigned to the logged-in manager.
+        """
+        user = self.request.user
+
+        # Filter by the 'performed_by' field to show only the manager's assigned workflow instances
+        return WorkflowInstance.objects.filter(performed_by=user)
+
+    @action(detail=True, methods=['POST'], url_path='update-status')
+    def update_status(self, request, pk=None):
+        """
+        Allows a manager to update the current stage of a WorkflowInstance.
+        Creates a StageTransition to track stage changes (history).
+        """
+        workflow_instance = self.get_object()
+
+        # Ensure the user is the assigned manager
+        if workflow_instance.performed_by != request.user:
+            return Response(
+                {"error": "You are not authorized to update this workflow instance."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Extract the new stage from the request data
+        new_stage = request.data.get("current_stage")
+        if new_stage not in dict(WorkflowInstance.DOC_STAGES).keys():
+            return Response(
+                {"error": "Invalid stage."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if the stage is changing
+        old_stage = workflow_instance.current_stage
+        if old_stage == new_stage:
+            return Response(
+                {"error": "The current stage is already set to the given value."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create a StageTransition instance to record the transition
+        StageTransition.objects.create(
+            workflow_instance=workflow_instance,
+            from_stage=old_stage,
+            to_stage=new_stage,
+            action=f"Stage changed from {old_stage} to {new_stage}"
+        )
+
+        # Update the WorkflowInstance current stage
+        workflow_instance.current_stage = new_stage
+        workflow_instance.save()
+
+        return Response(
+            {"message": "Stage updated successfully.", "new_stage": new_stage},
+            status=status.HTTP_200_OK
+        )
+
+############################################################################################################################################################
+################################################ SOAP    ###############################################################################
+    
+############################################################################################################################################################
 ############################################################################################################################################################
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny

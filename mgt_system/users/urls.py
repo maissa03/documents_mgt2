@@ -60,5 +60,6 @@ urlpatterns = [
     path('dashboard/admin/', TemplateView.as_view(template_name='users/admin_page.html'), name='admin-dashboard'),
     path('dashboard/manager/', TemplateView.as_view(template_name='users/manager_dashboard.html'), name='manager-dashboard'),
     path('dashboard/employee/', TemplateView.as_view(template_name='users/employee_dashboard.html'), name='employee-dashboard'),
+    
 ]
 

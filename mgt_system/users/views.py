@@ -153,28 +153,44 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Login API
+
+from rest_framework_simplejwt.tokens import RefreshToken
+
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+        print("LoginView accessed")  # Debugging statement
+
         username = request.data.get('username')
         password = request.data.get('password')
         user = authenticate(request, username=username, password=password)
         
         if user:
-            login(request, user)
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+
+            # Determine the user's role
             if user.groups.filter(name='Administrator').exists():
-                return Response({'redirect_url': '/users/dashboard/admin/'}, status=status.HTTP_200_OK)
+                role = 'Administrator'
             elif user.groups.filter(name='Manager').exists():
-                return Response({'redirect_url': '/users/dashboard/manager/'}, status=status.HTTP_200_OK)
+                role = 'Manager'
             elif user.groups.filter(name='Employee').exists():
-                return Response({'redirect_url': '/users/dashboard/employee/'}, status=status.HTTP_200_OK)
+                role = 'Employee'
             else:
                 return Response({"error": "User does not have a valid role."}, status=status.HTTP_403_FORBIDDEN)
+            print(access_token,str(refresh),role)
+            return Response({
+                'access_token': access_token,
+                'refresh_token': str(refresh),
+                'role': role
+            }, status=status.HTTP_200_OK)
         else:
-            # Add a print statement for debugging
             print(f"Failed login attempt for username: {username}")
             return Response({"error": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+
+
 
 # Group-based Views
 @api_view(['GET'])
@@ -205,4 +221,3 @@ class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
-
