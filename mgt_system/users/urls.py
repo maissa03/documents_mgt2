@@ -38,8 +38,10 @@ from .views import (
 from django.views.generic import TemplateView
 
 # Initialize Router for the UserViewSet
+"""
 router = DefaultRouter()
 router.register('users', UserViewSet, basename='user')
+"""
 
 urlpatterns = [
     # Admin Site
@@ -51,7 +53,7 @@ urlpatterns = [
     path('users/api/admin-page/', admin_view, name='api-admin-view'),
     path('users/api/manager-dashboard/', manager_dashboard, name='api-manager-dashboard'),
     path('users/api/employee-dashboard/', employee_dashboard, name='api-employee-dashboard'),
-    path('users/api/', include(router.urls)),
+    #path('users/api/', include(router.urls)),
 
     # HTML Pages (Template-Based Views)
     path('', TemplateView.as_view(template_name='users/index.html'), name='home'),

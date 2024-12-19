@@ -28,16 +28,17 @@ class WorkflowInstanceSerializer(serializers.ModelSerializer):
 
 
 class DocumentSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='uploaded_by.username', read_only=True)
     workflow_status = serializers.CharField(source='workflow_instance.status', read_only=True)  # Directly access status
     workflow_instance_details = WorkflowInstanceSerializer(source='workflow_instance', read_only=True)  # Include full instance details if needed
-
+    workflow_instance_status = serializers.CharField(source='workflow_instance.status', read_only=True)  
     class Meta:
         model = Document
         fields = [
             'id', 'title', 'content', 'type', 'status', 'uploaded_by',
-            'file_path', 'created_at', 'workflow_status', 'workflow_instance_details'
+            'file_path', 'created_at', 'workflow_status', 'workflow_instance_details','workflow_instance_status','user_name',
         ]
-        read_only_fields = ['uploaded_by', 'type', 'content', 'workflow_instance']
+        read_only_fields = ['uploaded_by', 'type', 'content', 'workflow_instance','user_name']
 
 class WorkflowSerializer(serializers.ModelSerializer):
     class Meta:

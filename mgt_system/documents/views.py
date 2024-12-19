@@ -75,10 +75,27 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     parser_classes = [MultiPartParser, FormParser]  # Add parsers to support file uploads
 
+    @action(detail=True, methods=['GET'], url_path='history')
+    def document_history(self, request, pk=None):
+        """
+        Retrieve the history (stage transitions) for a specific document.
+        """
+        document = self.get_object()
+        workflow_instance = document.workflow_instance
+
+        if not workflow_instance:
+            return Response({"error": "No workflow instance found for this document."}, status=404)
+
+        transitions = StageTransition.objects.filter(workflow_instance=workflow_instance)
+        serializer = StageTransitionSerializer(transitions, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['PATCH'], url_path='edit')
     def edit_document(self, request, pk=None):
         """
         Allows the employee to update the document name and file.
+        Re-processes the file for content summarization and classification.
+        Synchronizes the updated file with Nextcloud.
         """
         document = self.get_object()
 
@@ -91,13 +108,83 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
         # Extract new title and file from request
         title = request.data.get("title", document.title)
-        file = request.FILES.get("file_path", document.file_path)
+        file = request.FILES.get("file_path")
 
+        # Update document name
         document.title = title
-        document.file_path = file
+
+        if file:
+            try:
+                # Process the new file
+                pdf_reader = PyPDF2.PdfReader(file)
+                document_content = "".join([page.extract_text() or "" for page in pdf_reader.pages])
+
+                # Summarize the document content
+                summarized_content = summarizer(document_content, max_length=150, min_length=5, do_sample=False)
+                summary_text = summarized_content[0]['summary_text']
+
+                # Classify document type
+                result = classifier(document_content, candidate_labels=['Invoice', 'Contract', 'Report'])
+                document_type = result['labels'][0]  # Most probable label
+
+                # Synchronize the updated file with Nextcloud
+                nextcloud_url = self.edit_with_nextcloud(file, document)
+
+                # Update all document fields
+                document.file_path = file  # Save the new file
+                document.content = summary_text  # Update summarized content
+                document.type = document_type  # Update classified type
+                document.nextcloud_url = nextcloud_url  # Update Nextcloud URL
+
+            except Exception as e:
+                print(f"Error processing file: {e}")
+                return Response(
+                    {"error": f"Failed to process and synchronize the file: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Save document changes
         document.save()
 
-        return Response({"message": "Document updated successfully.", "data": DocumentSerializer(document).data}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "message": "Document updated, re-processed, and synchronized successfully.",
+                "data": DocumentSerializer(document).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def edit_with_nextcloud(self, file, document_instance):
+        """Uploads the document to Nextcloud and returns the Nextcloud file URL."""
+        NEXTCLOUD_URL = "https://use08.thegood.cloud/remote.php/dav/files"
+        NEXTCLOUD_USERNAME = "maalejmaissa7@gmail.com"
+        NEXTCLOUD_PASSWORD = "Qb#M5!Xz@A@kX.f"
+        NEXTCLOUD_UPLOAD_DIR = f"{NEXTCLOUD_URL}/{NEXTCLOUD_USERNAME}/uploaded_documents"
+
+        # Ensure the Nextcloud folder exists
+        folder_path = f"{NEXTCLOUD_UPLOAD_DIR}"
+        response = requests.request(
+            "MKCOL", folder_path, auth=HTTPBasicAuth(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD)
+        )
+        if response.status_code not in [201, 405]:
+            raise Exception(f"Failed to create Nextcloud folder: {response.status_code}, {response.text}")
+
+        # Upload the file
+        file_path = f"{NEXTCLOUD_UPLOAD_DIR}/{file.name}"
+        file.seek(0)
+        file_content = file.read()
+        upload_response = requests.put(
+            file_path, data=file_content, auth=HTTPBasicAuth(NEXTCLOUD_USERNAME, NEXTCLOUD_PASSWORD)
+        )
+
+        if upload_response.status_code in [201, 204]:  # Success
+            print(f"File successfully uploaded to Nextcloud: {file_path}")
+            return file_path  # Return the new file path
+        else:
+            raise Exception(f"Nextcloud upload failed: {upload_response.status_code}, {upload_response.text}")
+
+
+
 
     def perform_create(self, serializer):
         """Handles document creation with file upload, text extraction, summarization, and workflow assignment."""
@@ -116,7 +203,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         print("Extracted Content:", document_content)
 
         # Summarize the document content
-        summarized_content = summarizer(document_content, max_length=150, min_length=5, do_sample=False)
+        summarized_content = summarizer(document_content, max_length=1500000, min_length=5, do_sample=False)
         summary_text = summarized_content[0]['summary_text']
 
         # Classify document type

@@ -18,19 +18,19 @@ Including another URLconf
 from django.urls import include, path
 from graphene_django.views import GraphQLView
 from graphql_app.schema import schema
-from users.views import UserViewSet
+from users.views import UserViewSet,GroupViewSet
 from documents.views import DocumentViewSet, WorkflowViewSet,HandleSOAPDocumentView
 from rest_framework.routers import DefaultRouter
 from legacy_soap.soap_services import legacy_document_service_app
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
-    TokenRefreshView,
+    TokenRefreshView
 )
 from django.conf import settings
 from django.conf.urls.static import static
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
-
+router.register(r'groups',GroupViewSet)
 urlpatterns = [
     path('users/', include('users.urls')),
     path('api/', include(router.urls)), 
